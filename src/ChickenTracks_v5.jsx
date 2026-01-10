@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// ChickenTracks v7 - FULL CAMERA EXPERIENCE  
-// getUserMedia • Live Preview • Professional Controls • Premium Feel
+// ChickenTracks v7 - FULL CAMERA + ALL FEATURES
+// Live Camera • All Navigation • Complete System
 
 export default function ChickenTracksApp() {
   // === STATE ===
@@ -34,7 +34,7 @@ export default function ChickenTracksApp() {
   
   const photoInputRef = useRef(null);
   
-  // v7 - CAMERA STATE
+  // v7 CAMERA STATE
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -99,7 +99,6 @@ export default function ChickenTracksApp() {
       if (showCamera) stopCamera();
     };
   }, [showCamera, facingMode]);
-
   // === HANDLERS ===
   const handleAddChicken = () => {
     if (newChicken.name.trim()) {
@@ -179,25 +178,41 @@ export default function ChickenTracksApp() {
     event.target.value = '';
   };
   
+
+  // ============================================
+  // CAMERA FUNCTIONS (v7 FULL SYSTEM)
+  // ============================================
   
-  // === CAMERA FUNCTIONS (v7) ===
   const startCamera = async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraSupported(false);
-        setCameraError('Camera not supported');
+        setCameraError('Camera not supported on this device');
         return;
       }
+      
       const constraints = {
-        video: { facingMode: facingMode, width: { ideal: 1920, max: 1920 }, height: { ideal: 1080, max: 1080 } }
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 }
+        }
       };
+      
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const track = stream.getVideoTracks()[0];
       const capabilities = track.getCapabilities();
-      if (capabilities.torch) setHasFlash(true);
+      
+      if (capabilities.torch) {
+        setHasFlash(true);
+      }
+      
       setCameraStream(stream);
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
       setCameraError(null);
+      
     } catch (err) {
       console.error('Camera error:', err);
       setCameraError(err.message);
@@ -210,14 +225,18 @@ export default function ChickenTracksApp() {
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
     }
-    if (videoRef.current) videoRef.current.srcObject = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
   
   const toggleFlash = async () => {
     if (cameraStream && hasFlash) {
       const track = cameraStream.getVideoTracks()[0];
       try {
-        await track.applyConstraints({ advanced: [{ torch: !flashEnabled }] });
+        await track.applyConstraints({
+          advanced: [{ torch: !flashEnabled }]
+        });
         setFlashEnabled(!flashEnabled);
       } catch (err) {
         console.error('Flash error:', err);
@@ -232,35 +251,47 @@ export default function ChickenTracksApp() {
   
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
+    
     const video = videoRef.current;
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
     const imageData = canvas.toDataURL('image/jpeg', 0.95);
     setCapturedPhoto(imageData);
   };
   
   const savePhoto = () => {
     if (!capturedPhoto || !selectedChicken) return;
+    
     const photoData = {
       id: Date.now(),
       data: capturedPhoto,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
     };
+    
     setFlock(prev => prev.map(chicken => 
       chicken.id === selectedChicken.id
-        ? { ...chicken, photos: [...(chicken.photos || []), photoData], totalPhotos: (chicken.totalPhotos || 0) + 1 }
+        ? {
+            ...chicken,
+            photos: [...(chicken.photos || []), photoData],
+            totalPhotos: (chicken.totalPhotos || 0) + 1,
+          }
         : chicken
     ));
+    
     setCapturedPhoto(null);
     setShowCamera(false);
     stopCamera();
   };
   
-  const retakePhoto = () => setCapturedPhoto(null);
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+  };
   
   const closeCamera = () => {
     setShowCamera(false);
@@ -272,8 +303,9 @@ export default function ChickenTracksApp() {
     setSelectedChicken(chicken);
     setShowCamera(true);
   };
+  
 
-// === RENDER HELPERS ===
+  // === RENDER HELPERS ===
   const Button = ({ children, onClick, primary, disabled, style }) => (
     <button
       onClick={onClick}
@@ -295,20 +327,24 @@ export default function ChickenTracksApp() {
     </button>
   );
   
-  // === CAMERA COMPONENT (v7) ===
+
+  // ============================================
+  // CAMERA UI COMPONENT (RENDERS FIRST IF ACTIVE)
+  // ============================================
+  
   if (showCamera) {
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: colors.navyDark, zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
         <canvas ref={canvasRef} style={{ display: 'none' }} />
         
-        {/* Header */}
+        {/* Camera Header */}
         <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)' }}>
           <button onClick={closeCamera} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '28px', cursor: 'pointer' }}>✕</button>
           <div style={{ color: 'white', fontSize: '18px', fontWeight: '600' }}>{selectedChicken?.name}</div>
           <div style={{ width: '28px' }} />
         </div>
         
-        {/* Camera/Photo View */}
+        {/* Camera View or Captured Photo */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
           {!capturedPhoto ? (
             <>
@@ -334,7 +370,7 @@ export default function ChickenTracksApp() {
           )}
         </div>
         
-        {/* Controls */}
+        {/* Camera Controls */}
         <div style={{ padding: '30px 20px', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
           {!capturedPhoto ? (
             <>
@@ -352,8 +388,7 @@ export default function ChickenTracksApp() {
       </div>
     );
   }
-
-
+  
   // === SPLASH SCREEN ===
   if (appState === 'splash') {
     return (
